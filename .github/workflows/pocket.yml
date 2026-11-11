@@ -1,0 +1,51 @@
+# Publishes JARVIS Pocket (the phone version: Android, iPhone, iPad, any browser) to GitHub Pages.
+# It is the same interface as the desktop HUD, marked as Pocket so it talks to the Anthropic API
+# directly with the key each user enters on their own device. No key or secret is part of the build.
+#
+# One-time setup: repository Settings -> Pages -> Source: "GitHub Actions".
+# GitHub Pages needs a public repository (or a paid plan), so this job is skipped while the repo is private.
+name: Pocket (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+    paths: ["ui/**", ".github/workflows/pocket.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the Pocket site
+        run: |
+          mkdir _site
+          cp -R ui/. _site/
+          rm -f _site/pair.html
+          python3 - <<'EOF'
+          from pathlib import Path
+          p = Path("_site/index.html")
+          html = p.read_text(encoding="utf-8")
+          assert "<head>" in html
+          p.write_text(html.replace("<head>", '<head>\n<meta name="jarvis-pocket" content="1">', 1), encoding="utf-8")
+          EOF
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
