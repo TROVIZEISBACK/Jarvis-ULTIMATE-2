@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#01050b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JARVIS">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<title>J.A.R.V.I.S. Ultimate 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body data-state="idle" data-mode="idle" data-focus="standard" data-power="normal">
+<canvas id="scene"></canvas>
+<div id="vignette"></div>
+<div id="scanlines"></div>
+
+<!-- ======= HUD ======= -->
+<div id="hud">
+  <header id="topbar">
+    <div class="brand">
+      <div class="brand-mark"><span></span></div>
+      <div>
+        <div class="brand-name">J.A.R.V.I.S.</div>
+        <div class="brand-sub">ULTIMATE 2 · <span id="model">—</span></div>
+      </div>
+    </div>
+    <div id="status-pill"><i></i><span id="status-text">STANDBY</span></div>
+    <nav id="modebar" title="Modes (or say &quot;math mode&quot;, &quot;science mode&quot;, &quot;Jarvis, full power&quot;)">
+      <button type="button" data-focus="standard" class="on">STD</button>
+      <button type="button" data-focus="math">∑ MATH</button>
+      <button type="button" data-focus="science">⚛ SCIENCE</button>
+      <button type="button" id="mb-power">⚡ FULL POWER</button>
+    </nav>
+    <button type="button" id="btn-devices" hidden title="Use JARVIS from a phone, tablet or PC">📱 DEVICES</button>
+    <button type="button" id="btn-pocket" hidden title="Pocket settings: API key, name, model">⚙</button>
+    <div id="sysbar">
+      <span id="sb-power" title="Battery"><b>PWR</b><em>—</em></span>
+      <span id="sb-vol" title="Output volume"><b>VOL</b><em>—</em></span>
+      <span id="sb-net" title="Network"><b>NET</b><em>—</em></span>
+      <span id="sb-load" title="Load"><b>LOAD</b><em>—</em></span>
+    </div>
+    <div class="clock">
+      <div id="clock-time">--:--:--</div>
+      <div id="clock-date">—</div>
+    </div>
+  </header>
+
+  <aside id="left-col">
+    <section class="hud-card" id="card-sys">
+      <h3><b>01</b> SYSTEM CORE</h3>
+      <div class="gauge-row">
+        <div class="gauge" id="g-cpu">
+          <svg viewBox="0 0 120 120"><circle class="g-track" cx="60" cy="60" r="50"/><circle class="g-val" cx="60" cy="60" r="50"/><circle class="g-ticks" cx="60" cy="60" r="56"/></svg>
+          <div class="g-label"><span class="g-num">0</span><small>CPU %</small></div>
+        </div>
+        <div class="gauge" id="g-mem">
+          <svg viewBox="0 0 120 120"><circle class="g-track" cx="60" cy="60" r="50"/><circle class="g-val" cx="60" cy="60" r="50"/><circle class="g-ticks" cx="60" cy="60" r="56"/></svg>
+          <div class="g-label"><span class="g-num">0</span><small>MEM %</small></div>
+        </div>
+      </div>
+      <div id="cores"></div>
+      <div class="stat-line"><span>DISK</span><div class="bar"><i id="b-disk"></i></div><em id="t-disk">—</em></div>
+      <div class="stat-line"><span>POWER</span><div class="bar"><i id="b-bat"></i></div><em id="t-bat">—</em></div>
+      <div class="stat-line"><span>UPTIME</span><em id="t-up" class="wide">—</em></div>
+      <div id="procs" aria-label="Busiest processes"></div>
+    </section>
+    <section class="hud-card" id="card-weather">
+      <h3><b>02</b> ATMOSPHERICS</h3>
+      <div class="wx">
+        <div class="wx-temp" id="wx-temp">--°</div>
+        <div class="wx-meta">
+          <div id="wx-cond">Acquiring…</div>
+          <div id="wx-place">—</div>
+          <div id="wx-extra">—</div>
+        </div>
+      </div>
+    </section>
+    <section class="hud-card" id="card-media" hidden>
+      <h3><b>03</b> AUDIO FEED <span id="mp-player">—</span></h3>
+      <div id="mp-title">—</div>
+      <div id="mp-artist">—</div>
+      <div class="mp-row">
+        <span id="mp-pos">0:00</span><div class="bar"><i id="mp-bar"></i></div><span id="mp-dur">0:00</span>
+      </div>
+      <div class="mp-controls">
+        <button type="button" data-media="previous" title="Previous">⏮</button>
+        <button type="button" data-media="toggle" id="mp-toggle" title="Play / pause">⏯</button>
+        <button type="button" data-media="next" title="Next">⏭</button>
+      </div>
+    </section>
+  </aside>
+
+  <aside id="right-col">
+    <section class="hud-card" id="card-cam">
+      <h3><b>04</b> OPTICAL SENSOR <span id="cam-status">OFFLINE</span></h3>
+      <div id="cam-wrap">
+        <video id="cam" playsinline muted></video>
+        <canvas id="cam-overlay"></canvas>
+        <div class="cam-corners"><i></i><i></i><i></i><i></i></div>
+        <div id="cam-gesture">—</div>
+      </div>
+      <div class="gesture-legend">
+        <span id="legend-wake">✋ clear</span><span>✊ stop</span><span>👍 yes</span><span>👎 no</span><span>✌ scan</span><span>🤏 grab</span>
+      </div>
+    </section>
+    <section class="hud-card" id="card-agenda">
+      <h3><b>05</b> SCHEDULE <span id="ag-date">—</span></h3>
+      <div id="agenda"><div class="ag-empty">Loading…</div></div>
+    </section>
+    <div id="panels"></div>
+  </aside>
+
+  <section id="console">
+    <div id="feed"></div>
+    <div id="voice-line"><span id="heard"></span></div>
+    <form id="cmd">
+      <button type="button" id="btn-attach" class="icon-btn" title="Attach images (or paste / drop them)">
+        <svg viewBox="0 0 24 24"><path d="M16.5 6.5v10a4.5 4.5 0 0 1-9 0V5a3 3 0 0 1 6 0v10.5a1.5 1.5 0 0 1-3 0V6.5H9v9a3 3 0 0 0 6 0V5a4.5 4.5 0 0 0-9 0v11.5a6 6 0 0 0 12 0v-10h-1.5Z"/></svg>
+      </button>
+      <input type="file" id="attach-input" accept="image/*" multiple hidden>
+      <div id="tray" hidden></div>
+      <button type="button" id="btn-mic" class="icon-btn on" title="Microphone">
+        <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/></svg>
+      </button>
+      <input id="cmd-input" autocomplete="off" placeholder="Type a command">
+      <button type="button" id="btn-stop" class="icon-btn" title="Stop (Esc)">
+        <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>
+      </button>
+      <button type="submit" class="icon-btn send" title="Send">
+        <svg viewBox="0 0 24 24"><path d="M3 20.5 21 12 3 3.5 3 10l12 2-12 2z"/></svg>
+      </button>
+    </form>
+  </section>
+
+  <div id="core-label">
+    <div id="core-state">STANDBY</div>
+    <div id="core-sub">AWAITING INSTRUCTION</div>
+  </div>
+  <div id="geo-label"></div>
+</div>
+
+<div id="hand-cursor"><i></i></div>
+<div id="alert"></div>
+<div id="protocol-splash"><div class="ps-inner"><small>PROTOCOL</small><div id="ps-name"></div><em>ENGAGED</em></div></div>
+
+<div id="confirm" hidden>
+  <div class="confirm-box">
+    <div class="confirm-head">⚠ AUTHORISATION REQUIRED</div>
+    <div class="confirm-kind" id="confirm-kind"></div>
+    <pre id="confirm-detail"></pre>
+    <div class="confirm-actions">
+      <button id="confirm-yes">APPROVE</button>
+      <button id="confirm-no">DENY</button>
+    </div>
+    <div class="confirm-hint">Say “yes” / “no”, or show 👍 / 👎</div>
+  </div>
+</div>
+
+<div id="devices" hidden>
+  <div class="dv-box">
+    <div class="dv-head"><b>📱 DEVICES</b><button type="button" id="dv-close" title="Close">✕</button></div>
+    <p class="dv-intro">Use JARVIS from a phone, tablet or another computer on the same Wi-Fi. JARVIS keeps running on this computer; the device gets the full interface, with its own mic and speaker.</p>
+    <div class="dv-row"><span id="dv-status">OFF</span><button type="button" id="dv-toggle">TURN ON</button></div>
+    <div id="dv-on" hidden>
+      <div class="dv-label">ADDRESS</div>
+      <div id="dv-addr"></div>
+      <button type="button" id="dv-pair">PAIR A DEVICE</button>
+      <div id="dv-pairing" hidden>
+        <div id="dv-qr"></div>
+        <div><div class="dv-label">SCAN WITH THE DEVICE'S CAMERA, OR OPEN THE ADDRESS AND ENTER</div>
+          <div id="dv-code">——— ———</div><div id="dv-left"></div>
+          <p class="dv-hint">The device will warn that the connection isn't private: the certificate was made by this computer, not a public authority. Choose <b>Show details → visit this website</b> (Safari) or <b>Advanced → Proceed</b> (Chrome/Edge).</p></div>
+      </div>
+      <div class="dv-label">PAIRED DEVICES</div>
+      <ul id="dv-list"></ul>
+    </div>
+  </div>
+</div>
+
+<div id="pocket-setup" hidden>
+  <form id="ps-form" class="hud-card" autocomplete="off">
+    <h3><b>⚙</b> JARVIS POCKET</h3>
+    <p class="ps-intro">Pocket runs JARVIS entirely on this device, with your own Anthropic API key
+      (<a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">get one here</a>; usage is billed to that key).
+      The key is stored only in this browser and sent only to Anthropic.</p>
+    <label>Anthropic API key<input id="ps-key" type="password" spellcheck="false" autocapitalize="off" autocomplete="off"></label>
+    <label>What should JARVIS call you?<input id="ps-owner" type="text" maxlength="40"></label>
+    <label>Model<select id="ps-model">
+      <option value="claude-opus-5-5">Claude Opus 5.5 (best)</option>
+      <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (faster, half the price)</option>
+      <option value="claude-haiku-5-5">Claude Haiku 5.5 (quickest, cheapest)</option>
+    </select></label>
+    <div class="ps-buttons">
+      <button type="submit">SAVE</button>
+      <button type="button" id="ps-close">CLOSE</button>
+      <button type="button" id="ps-forget" hidden>REMOVE KEY</button>
+    </div>
+    <p class="ps-note">Phones can't let a web app control other apps or settings; for full control run JARVIS on a Mac,
+      Windows or Linux computer and connect to it from 📱 DEVICES there.</p>
+  </form>
+</div>
+
+<div id="boot">
+  <div class="boot-inner">
+    <div class="boot-ring"><i></i><i></i><i></i></div>
+    <h1>J.A.R.V.I.S.</h1>
+    <p class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · ULTIMATE 2</p>
+    <pre id="boot-log"></pre>
+    <button id="boot-btn">INITIALISE</button>
+    <p class="boot-note">Enables camera for gesture control · Esc stops JARVIS</p>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

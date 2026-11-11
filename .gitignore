@@ -1,0 +1,28 @@
+# Secrets and personal settings: never upload
+.env
+.env.*
+!.env.example
+
+# Personal data JARVIS collects while running
+data/memory.json
+data/mode.json
+data/remote/
+data/tts-cache/
+voice-samples/
+
+# Downloads and builds
+.venv/
+models/
+__pycache__/
+*.pyc
+build/
+*.app
+
+# Local tooling and system files
+.claude/
+.DS_Store
+*.log
+*.tmp
+
+# Images attached in the HUD
+data/uploads/

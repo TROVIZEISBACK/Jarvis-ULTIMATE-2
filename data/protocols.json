@@ -1,0 +1,26 @@
+{
+  "house party protocol": {
+    "hud_mode": "party",
+    "instructions": "Set system volume to 70%, start some music (resume the media player, or open the music app this computer has and shuffle), and announce that the House Party Protocol is active."
+  },
+  "clean slate protocol": {
+    "hud_mode": "alert",
+    "instructions": "Quit every open application except the file manager (Finder / File Explorer), the terminal running JARVIS and the browser showing the JARVIS interface. List the apps first and get confirmation before quitting anything with unsaved work."
+  },
+  "workshop protocol": {
+    "hud_mode": "scan",
+    "instructions": "Prepare a coding session: open Visual Studio Code (or the platform's own IDE if VS Code is missing), a terminal, and the browser. Turn on Do Not Disturb if possible. Report system diagnostics briefly."
+  },
+  "lockdown protocol": {
+    "hud_mode": "alert",
+    "instructions": "Mute the volume, pause any media, and lock the screen (system_control lock_screen). Speak a one-line farewell first."
+  },
+  "morning briefing": {
+    "hud_mode": "briefing",
+    "instructions": "Give a crisp morning briefing: greeting, the time and date, local weather (use the weather tool), battery and system status, top 3 news headlines from a web search, and today's calendar events if a calendar tool is available. Show the key facts in a HUD panel."
+  },
+  "eyes on protocol": {
+    "hud_mode": "scan",
+    "instructions": "Look through the webcam and give a tactical-style scene assessment: people present, what they are doing, objects of note, lighting. Display it in a HUD panel titled SCAN REPORT."
+  }
+}

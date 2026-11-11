@@ -1,0 +1,19 @@
+{
+  "name": "J.A.R.V.I.S. Ultimate 2",
+  "short_name": "JARVIS",
+  "description": "Your JARVIS: on your computer, or in your pocket",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#01050b",
+  "theme_color": "#01050b",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

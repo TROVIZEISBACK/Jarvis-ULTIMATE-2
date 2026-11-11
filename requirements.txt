@@ -1,0 +1,30 @@
+# JARVIS Ultimate 2 — Python 3.11+ on macOS, Windows or Linux.
+anthropic>=2.6
+aiohttp
+numpy
+scipy
+sympy
+psutil
+Pillow
+SpeechRecognition
+sounddevice          # microphone and audio devices (Linux also needs: sudo apt install libportaudio2)
+soundfile
+kokoro-onnx          # JARVIS's neural voice (model downloaded by run.sh / run.ps1)
+pyautogui            # screen, mouse and keyboard control
+pyperclip
+pyserial             # Arduino / ESP32 / serial boards
+cryptography         # the HTTPS certificate for phones and tablets
+
+# macOS
+pyobjc-framework-Cocoa; sys_platform == "darwin"
+pyobjc-framework-Quartz; sys_platform == "darwin"
+pyobjc-framework-ApplicationServices; sys_platform == "darwin"
+pyobjc-framework-EventKit; sys_platform == "darwin"
+pyobjc-framework-AVFoundation; sys_platform == "darwin"
+
+# Windows and Linux: global push-to-talk keys
+pynput; sys_platform != "darwin"
+
+# Windows: reading and setting the volume
+pycaw; sys_platform == "win32"
+comtypes; sys_platform == "win32"
