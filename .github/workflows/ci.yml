@@ -22,9 +22,16 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      # PortAudio only powers the microphone, which the smoke test leaves off. JARVIS must start
+      # without it, so a package-server outage is a warning here, not a failed build.
       - name: System audio library (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libportaudio2
+        run: |
+          for attempt in 1 2 3; do
+            if sudo apt-get update -q && sudo apt-get install -y -q libportaudio2; then exit 0; fi
+            echo "apt attempt $attempt failed; retrying in 15 s"; sleep 15
+          done
+          echo "::warning::Could not install libportaudio2; running the smoke test without it"
       - name: Install requirements
         run: python -m pip install -r requirements.txt
       - name: Smoke test (imports, start, HUD, origin check, hello)
