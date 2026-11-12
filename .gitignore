@@ -6,6 +6,7 @@
 # Personal data JARVIS collects while running
 data/memory.json
 data/mode.json
+data/sentinel.json
 data/remote/
 data/tts-cache/
 voice-samples/

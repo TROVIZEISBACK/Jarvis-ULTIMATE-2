@@ -78,5 +78,12 @@ MAX_RECORDING = float(os.environ.get("JARVIS_MAX_RECORDING", "300"))  # seconds;
 MIC_MODE = os.environ.get("JARVIS_MIC_MODE", "push").lower()
 OPEN_BROWSER = _flag("JARVIS_OPEN_BROWSER", True)
 
+# Sentinel: scheduled background checks during part of the day (see jarvis/sentinel.py).
+# Off until switched on here, in the HUD or by voice. Its model is fixed in sentinel.py.
+SENTINEL = _flag("JARVIS_SENTINEL", False)
+SENTINEL_HOURS = os.environ.get("JARVIS_SENTINEL_HOURS", "08:00-12:30")           # daily window, 24-hour clock
+SENTINEL_TEXT_MINUTES = float(os.environ.get("JARVIS_SENTINEL_TEXT_MINUTES", "10"))      # status check; 0 = never
+SENTINEL_SCREEN_MINUTES = float(os.environ.get("JARVIS_SENTINEL_SCREEN_MINUTES", "25"))  # screen check; 0 = never
+
 OWNER = os.environ.get("JARVIS_OWNER", "sir")
 IDLE_RESET_MINUTES = float(os.environ.get("JARVIS_IDLE_RESET_MINUTES", "20"))

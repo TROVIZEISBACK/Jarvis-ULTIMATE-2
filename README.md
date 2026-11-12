@@ -84,6 +84,7 @@ JARVIS.app can be signed with a self-signed certificate, **JARVIS Local Signing*
 | **Music** | "Play AC/DC", "Pause", "Skip this", "What's playing?". Mac: Music or Spotify. Windows: media keys, Spotify or YouTube Music. Linux: any MPRIS player through `playerctl`. | Mac, Windows, Linux |
 | **System controls** | Volume, mute, dark mode, lock screen, sleep the display, Wi-Fi on or off, and notifications. | Mac, Windows, Linux |
 | **Situational awareness** | JARVIS speaks up on its own when the battery runs low, an app hogs the processor for a minute, memory or disk space runs short, or (Mac) a meeting starts within 10 minutes. Set `JARVIS_ALERTS=0` to silence this. | Mac, Windows, Linux |
+| **Sentinel** | JARVIS checks in by itself on a schedule (a status check every 10 minutes and a screen check every 25, 08:00 to 12:30 by default) and speaks only when something needs you. See [Sentinel](#sentinel-always-on-checks). | Mac, Windows, Linux |
 | **HUD** | Details appear as floating holographic panels. JARVIS keeps its spoken replies short. | everywhere |
 
 ### Modes
@@ -120,6 +121,23 @@ Your hands also appear as a 3D wireframe hologram in the scene. Faces get target
 - Speech is streamed sentence by sentence as Opus 5.5 writes it, and the 3D core pulses with the voice.
 - **The voice** is [Kokoro](https://github.com/thewh1teagle/kokoro-onnx), a neural text-to-speech model that runs locally on every desktop OS: free, offline, nothing sent anywhere. The default is the British male voice `bm_george`; `bm_lewis`, `bm_fable` and `bm_daniel` are the alternatives (set `JARVIS_KOKORO_VOICE`).
 - If the model is missing or fails, JARVIS falls back to the system voice: `say` on a Mac (`JARVIS_VOICE`, default Daniel), a British SAPI voice on Windows if one is installed, `espeak-ng` (en-gb) on Linux. Set `JARVIS_TTS=say` to use the system voice only.
+
+## Sentinel (always-on checks)
+Switch Sentinel on and JARVIS looks in on things by itself during part of the day, without being asked. Most checks end in silence; it speaks one short line only when something needs your attention.
+
+| Check | Default | What it looks at |
+|---|---|---|
+| **Status check** | every 10 minutes | Text only: the time, battery, processor, memory and disk, the busiest apps, what's playing, the weather, today's calendar and what you asked JARVIS to remember ("tell me at eleven to call the dentist"). |
+| **Screen check** | every 25 minutes, on its own | One screenshot: an error dialog, a crashed app, a long task that finished or failed. |
+
+With the default hours, **08:00 to 12:30**, that is 27 status checks and 10 screen checks a day.
+
+- **Turn it on:** the **◉ SENTINEL** button in the window, "Jarvis, sentinel on", or `JARVIS_SENTINEL=1` in `.env`. The panel shows the schedule, the next check and what the last one found, and can run a check right away.
+- **Sonnet 5.5 only.** Every check is one small request to `claude-sonnet-5-5`. The model is fixed in `jarvis/sentinel.py`, is not a setting, and an answer from any other model is thrown away. The model that answers your commands (Opus 5.5) is never used for a check. A status check is roughly 1,500 tokens; with the Claude Code brain it is billed to your Claude plan, with the API brain to your credits.
+- **It can't act.** A check has no tools: it can stay silent or say something, nothing else. Text on the screen is treated as information, never as instructions. If it offers to do something and you say "yes, do that", your next command carries what it said, so JARVIS knows what you mean.
+- **It waits its turn.** A check never starts while you are talking or JARVIS is working, and a check missed while the computer slept isn't made up later.
+- **Privacy:** a screen check sends a picture of your whole screen to Anthropic every 25 minutes while Sentinel is on and inside its hours. Set `JARVIS_SENTINEL_SCREEN_MINUTES=0` to keep the status checks only.
+- Change the hours and intervals with `JARVIS_SENTINEL_HOURS`, `JARVIS_SENTINEL_TEXT_MINUTES` and `JARVIS_SENTINEL_SCREEN_MINUTES`.
 
 ## JARVIS Pocket (Android, iPhone, iPad)
 Phones don't let an app take over other apps, so JARVIS can't run its full core there. **JARVIS Pocket** is the same holographic HUD running entirely in the phone's browser. It talks to Claude Opus 5.5 directly with **your own Anthropic API key**, and uses the phone's own speech recognition and voice.
@@ -210,6 +228,9 @@ The mouse failsafe stays on as well: slam the pointer into a screen corner to ab
 | `JARVIS_MIC_MODE` | `push` | `push`: mic opens only on the listen key · `wake`: always listening for the wake word |
 | `JARVIS_MIC` | `1` | Set to `0` for typing only |
 | `JARVIS_ALERTS` | `1` | Spoken heads-ups about battery, heavy apps, memory, disk and meetings |
+| `JARVIS_SENTINEL` | `0` | `1` starts with Sentinel on (the HUD button and "sentinel on / off" also switch it, and that choice is remembered) |
+| `JARVIS_SENTINEL_HOURS` | `08:00-12:30` | Daily window for Sentinel checks, 24-hour clock |
+| `JARVIS_SENTINEL_TEXT_MINUTES`, `JARVIS_SENTINEL_SCREEN_MINUTES` | `10`, `25` | Minutes between status checks and between screen checks; `0` switches that kind off |
 | `JARVIS_OPEN_BROWSER` | `1` | Set to `0` to start without opening the interface window |
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | — | For image generation. Create a token with the **Workers AI** permission at dash.cloudflare.com → My Profile → API Tokens |
 | `JARVIS_IMAGE_DIR` | `~/Pictures/JARVIS` | Where generated images are saved |
@@ -231,6 +252,7 @@ jarvis/computer.py    executor for the computer-use toolset (HiDPI-aware coordin
 jarvis/voice.py       push-to-talk / wake-word listener, Kokoro and system-voice synthesis
 jarvis/hotkey.py      global push-to-talk keys (Quartz on a Mac, pynput elsewhere)
 jarvis/window.py      the interface window (JARVIS.app, or a Chromium-family app window)
+jarvis/sentinel.py    Sentinel: scheduled status and screen checks on Sonnet 5.5, with no tools
 jarvis/imagegen.py    image generation through Cloudflare Workers AI
 jarvis/uploads.py     attached images: checks, metadata stripping, the tray that sends them with the next command
 jarvis/deploy.py      copy JARVIS's own source onto a connected drive or Android phone
@@ -243,13 +265,14 @@ ui/js/app.js          HUD, panels, telemetry, gesture → intent wiring
 ui/js/pocket.js       JARVIS Pocket: the brain, tools and voice running in the phone's browser
 ui/js/remote.js       companion microphone capture and speech playback
 ui/js/devices.js      📱 DEVICES panel (turn on, QR pairing, remove devices)
+ui/js/sentinel.js     ◉ SENTINEL panel (on/off, schedule, last result, check now)
 ui/sw.js              service worker that makes Pocket installable
 tests/smoke.py        cross-platform smoke test (CI runs it on Linux, Windows and macOS)
 ```
 
 API-brain request settings: model `claude-opus-5-5`, `thinking: adaptive` with `display: "updates"` (shows progress notes in the HUD), and `effort` from `.env`. Server-side refusal fallbacks (`fallbacks: "default"`) and automatic prompt caching are also on. Conversations reset after 20 idle minutes.
 
-**Privacy:** in the default push-to-talk mode, only what you say between the listen and send keys is recorded, and it goes to Google's free speech recognition. In `wake` mode every phrase the mic picks up goes there, because that's how the wake word is detected. Requests, images you attach, screenshots (including a wired phone's screen) and camera frames go to Anthropic, through either Claude Code or the API. Image descriptions go to Cloudflare.
+**Privacy:** in the default push-to-talk mode, only what you say between the listen and send keys is recorded, and it goes to Google's free speech recognition. In `wake` mode every phrase the mic picks up goes there, because that's how the wake word is detected. Requests, images you attach, screenshots (including a wired phone's screen) and camera frames go to Anthropic, through either Claude Code or the API. Image descriptions go to Cloudflare. With Sentinel on, its status snapshots and screen pictures go to Anthropic on its schedule.
 
 The local server only accepts websocket connections from its own page. This stops other websites open in your browser from sending JARVIS commands. The companion port (8766, off unless you turn it on) serves only paired devices.
 

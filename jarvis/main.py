@@ -22,6 +22,7 @@ from .brain import Brain
 from .brain_code import CodeBrain
 from .tools import ToolRunner, weather
 from .remote import COOKIE, RemoteAccess, lan_ip
+from .sentinel import Sentinel
 from . import uploads
 from .voice import Listener, Speaker, recognize, strip_wake_word
 
@@ -54,6 +55,7 @@ class Hub:
         self.agenda_authorized = False
         self.alerted: dict[str, float] = {}
         self.modes = ModeState()
+        self.sentinel: Sentinel | None = None  # scheduled background checks (set at start-up)
         self.remote = RemoteAccess()
         self.remote_clients: set[web.WebSocketResponse] = set()  # phones, tablets, PCs
         self.voice_target: web.WebSocketResponse | None = None   # remote device that hears JARVIS, else this computer
@@ -497,6 +499,8 @@ class Hub:
     async def brain_worker(self):
         while True:
             text, source, images = await self.queue.get()
+            if self.sentinel:
+                text = self.sentinel.take_context() + text  # what a background check just told the user
             self.current = asyncio.create_task(self.brain.handle(text, source, images))
             try:
                 await self.current
@@ -640,6 +644,21 @@ class Hub:
                 await self.notice("UPCOMING", f"{e['title']} begins in {max(1, round(mins))} minutes{where}, {o}.",
                                   body=f"{start:%H:%M} · {e['title']}{where}", level="info")
 
+    async def sentinel_action(self, msg: dict):
+        """The SENTINEL button in the HUD on this computer: on, off, or one check right now."""
+        s, action = self.sentinel, msg.get("action")
+        if action in ("on", "off"):
+            await self.event_local("progress", {"text": await s.set_enabled(action == "on")})
+            self.speaker.say(f"Sentinel {'on' if s.enabled else 'off'}, {config.OWNER}.")
+        elif action == "check":
+            try:
+                await self.event_local("progress", {"text": s.check_now(str(msg.get("kind") or "text"))
+                                                    .replace("as soon as you finish replying", "in a moment")})
+            except ValueError as e:
+                await self.event_local("progress", {"text": f"Sentinel: {e}"})
+        else:
+            await s.announce()
+
     async def weather_worker(self):
         while True:
             try:
@@ -673,7 +692,7 @@ async def remote_ws_handler(request):
     return await serve_ws(request, remote=True, token=token)
 
 
-LOCAL_ONLY = {"remote", "calendar_connect"}  # never accepted from a remote device
+LOCAL_ONLY = {"remote", "calendar_connect", "sentinel"}  # never accepted from a remote device
 
 
 async def serve_ws(request, remote: bool, token: str | None = None):
@@ -701,7 +720,7 @@ async def serve_ws(request, remote: bool, token: str | None = None):
         "tray": HUB.tray.describe(),
         "agenda": {"events": HUB.agenda, "authorized": HUB.agenda_authorized},
         "remote_client": remote,
-        **({} if remote else {"remote": HUB.remote.describe()}),
+        **({} if remote else {"remote": HUB.remote.describe(), "sentinel": HUB.sentinel.describe()}),
     }))
     try:
         async for m in ws:
@@ -730,6 +749,9 @@ async def serve_ws(request, remote: bool, token: str | None = None):
                     elif kind == "remote":
                         await HUB.remote_action(msg)
                         continue
+                    elif kind == "sentinel":
+                        await HUB.sentinel_action(msg)
+                        continue
                     await HUB.on_client_message(msg)
                 except Exception as e:
                     print(f"[ws] bad message: {e}")
@@ -756,6 +778,7 @@ async def on_startup(app):
     HUB.loop = asyncio.get_running_loop()
     HUB.tools = ToolRunner(HUB)
     HUB.brain = make_brain(HUB)
+    HUB.sentinel = Sentinel(HUB)
     if config.MIC_ENABLED:
         HUB.listener = Listener(HUB.loop, HUB.on_phrase, HUB.mic_level, HUB.voice_state)
     HUB.speaker = Speaker(HUB.voice_level, HUB.voice_state,
@@ -777,7 +800,8 @@ async def on_startup(app):
     ]))
     if HUB.listener:
         HUB.listener.start()
-    workers = [HUB.brain_worker, HUB.telemetry_worker, HUB.weather_worker, HUB.media_worker, HUB.agenda_worker]
+    workers = [HUB.brain_worker, HUB.telemetry_worker, HUB.weather_worker, HUB.media_worker, HUB.agenda_worker,
+               HUB.sentinel.worker]
     if config.ALERTS:
         workers.append(HUB.watch_worker)
     for worker in workers:

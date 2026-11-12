@@ -1,6 +1,7 @@
 import { HoloScene } from "./scene.js";
 import { RemoteMic, SpeechPlayer } from "./remote.js";
 import { initDevices, updateDevices } from "./devices.js";
+import { initSentinel, updateSentinel } from "./sentinel.js";
 
 const $ = s => document.querySelector(s);
 const body = document.body;
@@ -101,6 +102,7 @@ function handle(m) {
       bootLog(`› cognitive core: ${m.model} via ${POCKET ? "Anthropic API, on this device" : m.brain === "API" ? "Anthropic API" : "Claude plan"}${online ? "" : "  [OFFLINE]"}`);
       if (m.modes) applyModes(m.modes);
       if (m.remote) updateDevices(m.remote);
+      if (m.sentinel) updateSentinel(m.sentinel);
       if (REMOTE) micMode = "push";
       refreshState();
       break;
@@ -131,6 +133,7 @@ function handle(m) {
     case "protocol": protocol(m); break;
     case "modes": applyModes(m); break;
     case "remote": updateDevices(m); break;
+    case "sentinel": if (!REMOTE && !POCKET) updateSentinel(m); break;
     case "speech_audio": player?.play(m.data); break;
     case "speech_stop": player?.stop(); break;
     case "timer": showAlert("TIMER SET", `${m.message} · ${m.due}`, "info");
@@ -633,6 +636,7 @@ if (POCKET) {
   $(".boot-note").textContent = "Tap the mic to talk to JARVIS on your computer";
 } else {
   initDevices(send);
+  initSentinel(send);
 }
 $("#boot-btn").onclick = async () => {
   $("#boot").classList.add("gone");

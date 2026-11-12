@@ -193,6 +193,21 @@ CUSTOM_TOOLS += [
 
 CUSTOM_TOOLS += [
     _tool(
+        "sentinel",
+        "JARVIS's sentinel: scheduled background checks that run by themselves during part of the day (a "
+        "status check and a separate screen check, each a small request to Claude Sonnet 5.5 with no tools; "
+        "it only speaks when something needs attention). Actions: on / off (when the user asks to start or "
+        "stop sentinel, watch or always-on mode), status (schedule, next check, what the last one found), "
+        "check (run one now; kind = text or screen, default text). The schedule and the model are fixed in "
+        "the settings; you cannot change them from here.",
+        {"action": {"type": "string", "enum": ["on", "off", "status", "check"]},
+         "kind": {"type": "string", "enum": ["text", "screen"]}},
+        ["action"],
+    ),
+]
+
+CUSTOM_TOOLS += [
+    _tool(
         "wired_devices",
         f"Devices plugged into this {M} by cable. Actions: list (everything connected: USB devices, Android "
         "phones, iPhones, drives, displays, audio devices, serial boards, printers, cameras, with notes on "
@@ -273,6 +288,7 @@ REQUIRED_TYPES = {
     "calendar": {"action": str},
     "compute": {"code": str},
     "set_mode": {"kind": str, "value": str},
+    "sentinel": {"action": str},
     "generate_image": {"prompt": str},
     "wired_devices": {"action": str},
     "android_device": {"action": str},
@@ -509,6 +525,14 @@ class ToolRunner:
 
         if name == "set_mode":
             return await hub.set_mode(inp["kind"], inp["value"], announce=True)
+
+        if name == "sentinel":
+            action = inp["action"]
+            if action in ("on", "off"):
+                return await hub.sentinel.set_enabled(action == "on")
+            if action == "check":
+                return hub.sentinel.check_now(inp.get("kind") or "text")
+            return hub.sentinel.summary()
 
         if name == "wired_devices":
             return await devices.wired(inp)

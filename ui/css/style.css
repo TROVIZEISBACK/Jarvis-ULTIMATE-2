@@ -335,8 +335,25 @@ body.remote #card-cam, body.remote #legend-wake { display: none; }
   border: 1px solid var(--line); padding: 6px 10px; cursor: pointer; white-space: nowrap; }
 #btn-devices:hover { color: var(--ink); border-color: var(--c); }
 #btn-devices.on { color: #fff; border-color: var(--ok); box-shadow: 0 0 10px rgba(61, 255, 168, .35); }
-#devices { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; background: rgba(0, 6, 12, .6); padding: 16px; }
-#devices[hidden] { display: none; }
+#devices, #sentinel { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; background: rgba(0, 6, 12, .6); padding: 16px; }
+#devices[hidden], #sentinel[hidden] { display: none; }
+
+/* ---------- sentinel (scheduled background checks) ---------- */
+#btn-sentinel { font-family: var(--font-display); font-size: 9.5px; letter-spacing: .14em; color: var(--dim); background: rgba(3, 16, 28, .7);
+  border: 1px solid var(--line); padding: 6px 10px; cursor: pointer; white-space: nowrap; }
+#btn-sentinel:hover { color: var(--ink); border-color: var(--c); }
+#btn-sentinel.on { color: var(--ink); border-color: var(--c); }
+#btn-sentinel.active { color: #fff; border-color: var(--ok); box-shadow: 0 0 10px rgba(61, 255, 168, .35); }
+#btn-sentinel.checking { animation: pulse 1.2s infinite; }
+body.pocket #btn-sentinel, body.remote #btn-sentinel { display: none !important; }
+.sn-line { color: #e9fbff; line-height: 1.45; overflow-wrap: anywhere; }
+.sn-count { color: var(--dim); font-family: var(--font-mono); font-size: 11.5px; margin-top: 8px; }
+.sn-now { display: flex; gap: 10px; margin-top: 18px; }
+#sn-toggle, .sn-now button { font-family: var(--font-display); font-size: 10.5px; letter-spacing: .2em; color: var(--c); background: rgba(var(--c-rgb), .08);
+  border: 1px solid var(--c); padding: 8px 14px; cursor: pointer; }
+.sn-now button { flex: 1; padding: 11px 8px; }
+.sn-now button:disabled { opacity: .4; cursor: default; }
+#sn-toggle.on { color: var(--c3); border-color: var(--c3); background: rgba(255, 59, 78, .08); }
 .dv-box { width: min(560px, 100%); max-height: 92vh; overflow-y: auto; padding: 18px 20px; background: rgba(3, 14, 26, .97);
   border: 1px solid var(--c); box-shadow: 0 0 40px rgba(var(--c-rgb), .3); font-size: 15px; }
 .dv-head { display: flex; justify-content: space-between; align-items: center; font-family: var(--font-display); letter-spacing: .25em; }

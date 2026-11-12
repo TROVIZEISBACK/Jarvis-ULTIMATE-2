@@ -49,6 +49,7 @@
       <button type="button" data-focus="science">⚛ SCIENCE</button>
       <button type="button" id="mb-power">⚡ FULL POWER</button>
     </nav>
+    <button type="button" id="btn-sentinel" hidden title="Sentinel: JARVIS checks in by itself on a schedule">◉ SENTINEL</button>
     <button type="button" id="btn-devices" hidden title="Use JARVIS from a phone, tablet or PC">📱 DEVICES</button>
     <button type="button" id="btn-pocket" hidden title="Pocket settings: API key, name, model">⚙</button>
     <div id="sysbar">
@@ -192,6 +193,22 @@
       <div class="dv-label">PAIRED DEVICES</div>
       <ul id="dv-list"></ul>
     </div>
+  </div>
+</div>
+
+<div id="sentinel" hidden>
+  <div class="dv-box">
+    <div class="dv-head"><b>◉ SENTINEL</b><button type="button" id="sn-close" title="Close">✕</button></div>
+    <p class="dv-intro">JARVIS checks in by itself on a schedule and speaks only when something needs your attention. Checks run on <b id="sn-model">claude-sonnet-5-5</b> only, never the model that answers your commands, and they cannot take actions. Screen checks send a picture of this screen to Anthropic.</p>
+    <div class="dv-row"><span id="sn-status">OFF</span><button type="button" id="sn-toggle">TURN ON</button></div>
+    <div class="dv-label">SCHEDULE</div>
+    <div id="sn-schedule" class="sn-line">—</div>
+    <div class="dv-label">NEXT CHECK</div>
+    <div id="sn-next" class="sn-line">—</div>
+    <div class="dv-label">LAST CHECK</div>
+    <div id="sn-last" class="sn-line">None yet.</div>
+    <div id="sn-count" class="sn-count"></div>
+    <div class="sn-now"><button type="button" id="sn-text">STATUS CHECK NOW</button><button type="button" id="sn-screen">SCREEN CHECK NOW</button></div>
   </div>
 </div>
 
