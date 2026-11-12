@@ -127,7 +127,7 @@ Phones don't let an app take over other apps, so JARVIS can't run its full core 
 Pocket can talk (tap the mic), search and read the web, look through the phone's camera, show HUD panels and the holo-globe, check the weather, remember things, set timers, open links, maps and phone / message / email apps, take attached photos, and switch modes (math, science, full power). It can't control other apps or settings; for that, use it as a [companion](#companion-mode-any-phone-tablet-or-pc) of a JARVIS computer.
 
 **Open it**
-- **Hosted:** when this repository is public, the [Pocket workflow](.github/workflows/pocket.yml) publishes it to GitHub Pages at `https://<your-github-user>.github.io/Jarvis-ULTIMATE-2/` (repository Settings → Pages → Source: *GitHub Actions*).
+- **Hosted:** open **https://trovizeisback.github.io/Jarvis-ULTIMATE-2/** on the phone. The [Pocket workflow](.github/workflows/pocket.yml) publishes it to GitHub Pages on every change. In a fork, it appears at `https://<your-github-user>.github.io/Jarvis-ULTIMATE-2/` once the fork is public and Settings → Pages → Source is *GitHub Actions*.
 - **Self-hosted:** serve the `ui/` folder over HTTPS from any static host and open it with `?pocket` at the end of the address.
 
 **Install it like an app**
