@@ -96,7 +96,7 @@ def check_sentinel() -> None:
             if len(asked) == 5:
                 return "Sir, I am another model.", "claude-opus-5-5"  # must be discarded
             return "NOTHING", sentinel.MODEL
-        s._content, s._ask = content, ask
+        s._content, s.ask = content, ask
 
         t = at(7, 0)
         while t < at(13, 30):  # a whole morning, one tick every 15 s
@@ -120,6 +120,79 @@ def check_sentinel() -> None:
     with contextlib.redirect_stdout(io.StringIO()):  # the per-check log lines
         asyncio.run(day())
     print("sentinel ok: 27 status + 10 screen checks a day, Sonnet 5.5 only, silent unless needed")
+
+
+def check_memory() -> None:
+    """Conversation memory: the log, the prompt, search, and compaction at the threshold (stubbed model)."""
+    import tempfile
+    import types
+    from jarvis import config, history
+
+    tmp = Path(tempfile.mkdtemp())
+    history.LOG, history.STATE = tmp / "history.jsonl", tmp / "conversation.json"
+    assert history.as_prompt() == "(no earlier conversations yet)"
+    assert config.COMPACT_AT == 60, "the default compaction threshold is 60% of the context window"
+
+    async def run() -> None:
+        events, resets = [], []
+
+        async def event(kind, payload=None):
+            events.append(kind)
+            if hub.history.open is not None:
+                hub.history.capture(kind, payload or {})
+
+        brain = types.SimpleNamespace(client=True, context_tokens=0, context_window=1_000_000, last_active=0.0,
+                                      has_conversation=True)
+
+        def reset(note=""):
+            resets.append(note)
+            brain.context_tokens = 0
+        brain.reset = reset
+        hub = types.SimpleNamespace(brain=brain, event=event, state="idle", queue=asyncio.Queue(), current=None)
+        mem = hub.history = history.ConversationMemory(hub)
+        summaries = []
+
+        async def summarise(text):
+            summaries.append(text)
+            return "About sir\n- Likes the colour teal.\nTimeline\n- Talked about colours and opened the notes folder."
+        mem.summarise = summarise
+
+        async def exchange(user, said, tokens, action=None):
+            mem.begin(user, "typed")
+            if action:
+                await event("action", action)
+            await event("assistant_delta", {"text": said})
+            await event("assistant_done", {})
+            mem.end()
+            brain.context_tokens = tokens
+            await mem.after_request()
+
+        await exchange("my favourite colour is teal", "Noted, sir.", 150_000)
+        await exchange("open my notes folder", "Done, sir.", 599_000, {"tool": "bash", "input": {"command": "open notes"}})
+        assert not resets and not summaries, "compacted below 60%"                      # 59.9%: not yet
+        assert len(history.load()) == 2 and history.load()[1]["actions"], history.load()
+        assert "favourite colour is teal" in history.as_prompt()
+        assert "open my notes folder" in history.search("notes FOLDER") and "Nothing" in history.search("zebra")
+
+        await exchange("what's the time", "Ten past nine, sir.", 600_000)               # 60%: compacts
+        assert len(resets) == 1 and len(summaries) == 1, (resets, summaries)
+        assert all(w in summaries[0] for w in ("teal", "notes folder", "Ten past nine")), "transcript incomplete"
+        state = history.load_state()
+        assert state["through"] == 3 and state["compactions"] == 1 and "teal" in state["summary"], state
+        assert len(history.load()) == 3, "compaction must never shorten the log"
+        prompt = history.as_prompt()
+        assert "Likes the colour teal" in prompt and "Ten past nine" in prompt           # summary + latest exchanges
+        assert mem.describe()["percent"] == 0 and brain.context_tokens == 0
+
+        await exchange("thanks", "Of course, sir.", 20_000)
+        assert len(resets) == 1 and "CURRENT SUMMARY" in summaries[0]
+        mem.note("sentinel", "Sir, the backup failed.")
+        assert history.load()[-1]["source"] == "sentinel" and len(history.load()) == 5
+
+    with contextlib.redirect_stdout(io.StringIO()):
+        asyncio.run(run())
+    history.LOG, history.STATE = config.DATA_DIR / "history.jsonl", config.DATA_DIR / "conversation.json"
+    print("memory ok: every exchange logged, compaction at 60% keeps the log and carries a summary forward")
 
 
 def free_port() -> int:
@@ -168,8 +241,10 @@ async def check_server(port: int) -> None:
 def main() -> None:
     check_imports()
     check_sentinel()
+    check_memory()
     port, remote_port = free_port(), free_port()
-    env = dict(os.environ, JARVIS_PORT=str(port), JARVIS_REMOTE_PORT=str(remote_port), JARVIS_MIC="0",
+    import tempfile
+    env = dict(os.environ, JARVIS_DATA_DIR=tempfile.mkdtemp(), JARVIS_PORT=str(port), JARVIS_REMOTE_PORT=str(remote_port), JARVIS_MIC="0",
                JARVIS_OPEN_BROWSER="0", JARVIS_BRAIN="api", ANTHROPIC_API_KEY="", JARVIS_ALERTS="0",
                PYTHONUNBUFFERED="1")
     proc = subprocess.Popen([sys.executable, "-m", "jarvis.main"], cwd=ROOT, env=env,

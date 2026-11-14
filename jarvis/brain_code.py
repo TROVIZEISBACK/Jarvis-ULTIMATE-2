@@ -75,10 +75,17 @@ class CodeBrain:
         self.stderr_tail = ""
         self.proc_effort = None
         self.busy = False
+        self.context_tokens = 0   # size of the conversation as of the latest reply
+        self.context_window = 0   # the model's context window, once Claude Code has reported it
         self._spawn_lock = asyncio.Lock()
+
+    @property
+    def has_conversation(self) -> bool:
+        return bool(self.session_id)
 
     def reset(self, note: str = ""):
         self.session_id = None
+        self.context_tokens = 0
         self.system = build_system("claude-code")
         self._stop_proc()
         if note:
@@ -147,9 +154,7 @@ class CodeBrain:
         if not self.binary:
             await self.hub.say_and_show(f"My higher functions are offline, {config.OWNER}. {self.offline_reason}.")
             return
-        if time.time() - self.last_active > config.IDLE_RESET_MINUTES * 60 and self.session_id:
-            self.reset("idle timeout")
-        self.last_active = time.time()
+        self.last_active = time.time()  # idle resets are done by jarvis/history.py, which keeps the memory
         now = datetime.datetime.now().strftime("%A %d %B %Y, %H:%M")
         prompt = f"{self.hub.modes.preamble()}[{now} · via {source}]\n{text}"
         if self.proc and self.proc.returncode is None and self.proc_effort != self.hub.modes.effort:
@@ -222,6 +227,11 @@ class CodeBrain:
                     self.hub.speaker.say(s)
                 await self.hub.event("assistant_done", {})
         elif kind == "assistant":
+            usage = msg.get("message", {}).get("usage") or {}
+            if not msg.get("parent_tool_use_id"):  # the main conversation, not a sub-agent
+                size = sum(usage.get(k) or 0 for k in ("input_tokens", "cache_creation_input_tokens",
+                                                       "cache_read_input_tokens", "output_tokens"))
+                self.context_tokens = size or self.context_tokens
             for block in msg.get("message", {}).get("content", []):
                 if block.get("type") == "tool_use":
                     await self.hub.event("state", {"state": "working"})
@@ -230,6 +240,9 @@ class CodeBrain:
                         await self.hub.event("action", {"tool": name, "input": _short(block.get("input", {}))})
         elif kind == "result":
             self.session_id = msg.get("session_id") or self.session_id
+            for model, used in (msg.get("modelUsage") or {}).items():
+                if model.startswith(config.MODEL) and used.get("contextWindow"):
+                    self.context_window = int(used["contextWindow"])
             return msg
         return None
 

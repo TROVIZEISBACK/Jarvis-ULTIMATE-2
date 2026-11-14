@@ -3,7 +3,8 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = ROOT / "data"
+DATA_DIR = Path(os.environ.get("JARVIS_DATA_DIR") or ROOT / "data")  # the tests point this at a scratch folder
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 UI_DIR = ROOT / "ui"
 
 
@@ -84,6 +85,13 @@ SENTINEL = _flag("JARVIS_SENTINEL", False)
 SENTINEL_HOURS = os.environ.get("JARVIS_SENTINEL_HOURS", "08:00-12:30")           # daily window, 24-hour clock
 SENTINEL_TEXT_MINUTES = float(os.environ.get("JARVIS_SENTINEL_TEXT_MINUTES", "10"))      # status check; 0 = never
 SENTINEL_SCREEN_MINUTES = float(os.environ.get("JARVIS_SENTINEL_SCREEN_MINUTES", "25"))  # screen check; 0 = never
+
+# Conversation memory (see jarvis/history.py): every exchange is logged on this computer and carried
+# into later conversations as a summary. The live conversation is compacted when it fills COMPACT_AT
+# percent of the model's context window, and after IDLE_RESET_MINUTES of silence.
+HISTORY = _flag("JARVIS_HISTORY", True)
+COMPACT_AT = float(os.environ.get("JARVIS_COMPACT_AT", "60"))
+CONTEXT_WINDOW = int(os.environ.get("JARVIS_CONTEXT_WINDOW", "0"))  # tokens; 0 = ask the model
 
 OWNER = os.environ.get("JARVIS_OWNER", "sir")
 IDLE_RESET_MINUTES = float(os.environ.get("JARVIS_IDLE_RESET_MINUTES", "20"))

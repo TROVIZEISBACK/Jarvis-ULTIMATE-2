@@ -266,7 +266,7 @@ class Sentinel:
         said, error, started = "", "", time.time()
         try:
             content = await self._content(kind)
-            reply, model = await asyncio.wait_for(self._ask(content), TIMEOUT)
+            reply, model = await asyncio.wait_for(self.ask(content), TIMEOUT)
             if not is_allowed_model(model):
                 raise RuntimeError(f"answered by {model or 'an unknown model'}, not {MODEL}; discarded")
             said = parse_reply(reply)
@@ -296,6 +296,8 @@ class Sentinel:
             await asyncio.sleep(1)
         self.notes.append((time.time(), said))
         self.untold.append((time.time(), said))
+        if getattr(self.hub, "history", None):
+            self.hub.history.note("sentinel", said)
         await self.hub.notice("SENTINEL", said, level="info")
 
     # --- what a check sees ---------------------------------------------------------------
@@ -353,27 +355,29 @@ class Sentinel:
     def _system(self) -> str:
         return SYSTEM.format(owner=config.OWNER, machine=plat.MACHINE)
 
-    async def _ask(self, content: list[dict]) -> tuple[str, str | None]:
-        """One request to MODEL with no tools. Returns (answer, the model that produced it)."""
+    async def ask(self, content: list[dict], system: str | None = None) -> tuple[str, str | None]:
+        """One request to MODEL with no tools. Returns (answer, the model that produced it).
+        Also used by jarvis/history.py to write the memory summary (with its own `system`)."""
         from .brain_code import CodeBrain
+        system = system or self._system()
         if isinstance(self.hub.brain, CodeBrain):
-            return await self._ask_claude_code(content)
-        return await self._ask_api(content)
+            return await self._ask_claude_code(content, system)
+        return await self._ask_api(content, system)
 
-    async def _ask_api(self, content: list[dict]) -> tuple[str, str | None]:
-        # No `fallbacks`: a check must not be answered by another model.
+    async def _ask_api(self, content: list[dict], system: str) -> tuple[str, str | None]:
+        # No `fallbacks`: this must not be answered by another model.
         resp = await self.hub.brain.client.messages.create(
-            model=MODEL, max_tokens=1000, system=self._system(),
+            model=MODEL, max_tokens=4000, system=system,
             messages=[{"role": "user", "content": content}])
         return "".join(b.text for b in resp.content if b.type == "text"), resp.model
 
-    async def _ask_claude_code(self, content: list[dict]) -> tuple[str, str | None]:
+    async def _ask_claude_code(self, content: list[dict], system: str) -> tuple[str, str | None]:
         """A separate, short-lived Claude Code process on MODEL (billed to the Claude plan), with
         every tool switched off and nothing saved. The main brain's Opus process is not involved."""
         brain = self.hub.brain
         proc = await asyncio.create_subprocess_exec(
             brain.binary, "-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
-            "--model", MODEL, "--effort", "low", "--system-prompt", self._system(),
+            "--model", MODEL, "--effort", "low", "--system-prompt", system,
             "--tools", "", "--strict-mcp-config", "--setting-sources", "", "--no-session-persistence",
             cwd=str(config.DATA_DIR), env=brain._env(),
             stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,

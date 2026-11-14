@@ -79,6 +79,7 @@ JARVIS.app can be signed with a self-signed certificate, **JARVIS Local Signing*
 | **Wired devices** | "What's plugged in?" lists everything connected by cable. JARVIS can eject drives, switch sound output, talk to Arduino-style boards over serial, and operate an Android phone over USB (see *Devices connected by cable*). | Mac, Windows, Linux |
 | **Holo-globe** | "Jarvis, show me Tokyo on the globe" turns the hologram to the location and pins it. | everywhere |
 | **Memory** | "Remember that…" is kept across sessions (`data/memory.json`; in Pocket, in the browser). | everywhere |
+| **Remembers every conversation** | Everything you and JARVIS say is logged on your computer and carried into later conversations, across restarts. The context compacts itself at 60% full. See [Conversation memory](#conversation-memory). | Mac, Windows, Linux |
 | **Timers** | "Remind me in 10 minutes to…" makes JARVIS speak the reminder when it's due. | everywhere (Pocket: while open) |
 | **Calendar & Reminders** | "What's on today?", "Add lunch with Pepper tomorrow at 1", "Remind me Friday at 9 to call Happy". Uses the Calendar and Reminders apps. | Mac |
 | **Music** | "Play AC/DC", "Pause", "Skip this", "What's playing?". Mac: Music or Spotify. Windows: media keys, Spotify or YouTube Music. Linux: any MPRIS player through `playerctl`. | Mac, Windows, Linux |
@@ -121,6 +122,19 @@ Your hands also appear as a 3D wireframe hologram in the scene. Faces get target
 - Speech is streamed sentence by sentence as Opus 5.5 writes it, and the 3D core pulses with the voice.
 - **The voice** is [Kokoro](https://github.com/thewh1teagle/kokoro-onnx), a neural text-to-speech model that runs locally on every desktop OS: free, offline, nothing sent anywhere. The default is the British male voice `bm_george`; `bm_lewis`, `bm_fable` and `bm_daniel` are the alternatives (set `JARVIS_KOKORO_VOICE`).
 - If the model is missing or fails, JARVIS falls back to the system voice: `say` on a Mac (`JARVIS_VOICE`, default Daniel), a British SAPI voice on Windows if one is installed, `espeak-ng` (en-gb) on Linux. Set `JARVIS_TTS=say` to use the system voice only.
+
+## Conversation memory
+JARVIS remembers everything you have talked about, including after a restart.
+
+- **The log.** Every exchange is written to `data/history.jsonl`, word for word and for good: what you said, what JARVIS answered and what it did. Ask "what did I tell you about the dentist last week?" and JARVIS searches it with its `recall` tool.
+- **The summary.** A running summary of the whole log is kept in `data/conversation.json`. Each new conversation starts with that summary plus the latest exchanges word for word, so JARVIS picks up where you left off.
+- **Auto-compact at 60%.** When the live conversation fills **60%** of the model's context window, JARVIS folds everything said since the last summary into it and continues on a fresh context that starts from the summary. The same happens after 20 quiet minutes, in the background, so the next request starts quickly. The log is never shortened, so nothing is forgotten; the feed shows "Memory compacted" when it happens.
+- **The meter.** `CTX` in the top bar shows how full the context is (hover for the token count and how many times it has compacted).
+- The summary is written by a small request to Claude Sonnet 5.5, not by the model that answers your commands.
+- **Privacy:** both files stay on your computer and are never part of the repository or of a copy JARVIS makes of itself. The transcript since the last summary goes to Anthropic when the summary is updated. To wipe JARVIS's memory of your conversations, quit it and delete the two files. `JARVIS_HISTORY=0` switches logging and memory off.
+- Change the threshold with `JARVIS_COMPACT_AT` (percent) and the quiet period with `JARVIS_IDLE_RESET_MINUTES`.
+
+JARVIS Pocket (phones) is separate: it keeps its own "remember that" notes in the browser and does not have this log.
 
 ## Sentinel (always-on checks)
 Switch Sentinel on and JARVIS looks in on things by itself during part of the day, without being asked. Most checks end in silence; it speaks one short line only when something needs your attention.
@@ -228,6 +242,9 @@ The mouse failsafe stays on as well: slam the pointer into a screen corner to ab
 | `JARVIS_MIC_MODE` | `push` | `push`: mic opens only on the listen key · `wake`: always listening for the wake word |
 | `JARVIS_MIC` | `1` | Set to `0` for typing only |
 | `JARVIS_ALERTS` | `1` | Spoken heads-ups about battery, heavy apps, memory, disk and meetings |
+| `JARVIS_HISTORY` | `1` | Log every exchange and carry the memory into new conversations; `0` switches it off |
+| `JARVIS_COMPACT_AT` | `60` | Percent of the model's context window at which the conversation is compacted into the summary |
+| `JARVIS_IDLE_RESET_MINUTES` | `20` | Quiet minutes after which the conversation is compacted in the background |
 | `JARVIS_SENTINEL` | `0` | `1` starts with Sentinel on (the HUD button and "sentinel on / off" also switch it, and that choice is remembered) |
 | `JARVIS_SENTINEL_HOURS` | `08:00-12:30` | Daily window for Sentinel checks, 24-hour clock |
 | `JARVIS_SENTINEL_TEXT_MINUTES`, `JARVIS_SENTINEL_SCREEN_MINUTES` | `10`, `25` | Minutes between status checks and between screen checks; `0` switches that kind off |
@@ -252,6 +269,7 @@ jarvis/computer.py    executor for the computer-use toolset (HiDPI-aware coordin
 jarvis/voice.py       push-to-talk / wake-word listener, Kokoro and system-voice synthesis
 jarvis/hotkey.py      global push-to-talk keys (Quartz on a Mac, pynput elsewhere)
 jarvis/window.py      the interface window (JARVIS.app, or a Chromium-family app window)
+jarvis/history.py     conversation memory: the log of every exchange, the running summary, compaction at 60%
 jarvis/sentinel.py    Sentinel: scheduled status and screen checks on Sonnet 5.5, with no tools
 jarvis/imagegen.py    image generation through Cloudflare Workers AI
 jarvis/uploads.py     attached images: checks, metadata stripping, the tray that sends them with the next command
@@ -270,7 +288,7 @@ ui/sw.js              service worker that makes Pocket installable
 tests/smoke.py        cross-platform smoke test (CI runs it on Linux, Windows and macOS)
 ```
 
-API-brain request settings: model `claude-opus-5-5`, `thinking: adaptive` with `display: "updates"` (shows progress notes in the HUD), and `effort` from `.env`. Server-side refusal fallbacks (`fallbacks: "default"`) and automatic prompt caching are also on. Conversations reset after 20 idle minutes.
+API-brain request settings: model `claude-opus-5-5`, `thinking: adaptive` with `display: "updates"` (shows progress notes in the HUD), and `effort` from `.env`. Server-side refusal fallbacks (`fallbacks: "default"`) and automatic prompt caching are also on. Conversations are compacted into the memory summary at 60% of the context window and after 20 idle minutes.
 
 **Privacy:** in the default push-to-talk mode, only what you say between the listen and send keys is recorded, and it goes to Google's free speech recognition. In `wake` mode every phrase the mic picks up goes there, because that's how the wake word is detected. Requests, images you attach, screenshots (including a wired phone's screen) and camera frames go to Anthropic, through either Claude Code or the API. Image descriptions go to Cloudflare. With Sentinel on, its status snapshots and screen pictures go to Anthropic on its schedule.
 

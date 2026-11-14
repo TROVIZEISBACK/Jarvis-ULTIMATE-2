@@ -5,6 +5,8 @@
 
 # Personal data JARVIS collects while running
 data/memory.json
+data/history.jsonl
+data/conversation.json
 data/mode.json
 data/sentinel.json
 data/remote/

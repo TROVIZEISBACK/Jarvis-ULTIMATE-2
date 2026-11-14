@@ -7,7 +7,7 @@ from pathlib import Path
 
 import aiohttp
 
-from . import computer, deploy, devices, imagegen, memory, plat, sysinfo, system
+from . import computer, deploy, devices, history, imagegen, memory, plat, sysinfo, system
 
 # --- Tool declarations ---------------------------------------------------------
 
@@ -192,6 +192,16 @@ CUSTOM_TOOLS += [
 ]
 
 CUSTOM_TOOLS += [
+    _tool(
+        "recall",
+        "Search the complete, word-for-word log of every past conversation with the user (what they said, "
+        "what you answered, what you did). Use it when they refer to something from the past that isn't in "
+        "your conversation memory, or ask what was said on a given day. query = words that must all appear "
+        "(any order); date = one day as YYYY-MM-DD; give either or both. Returns the matching exchanges, "
+        "newest first up to limit (default 8).",
+        {"query": {"type": "string"}, "date": {"type": "string", "description": "YYYY-MM-DD"},
+         "limit": {"type": "integer"}},
+    ),
     _tool(
         "sentinel",
         "JARVIS's sentinel: scheduled background checks that run by themselves during part of the day (a "
@@ -525,6 +535,12 @@ class ToolRunner:
 
         if name == "set_mode":
             return await hub.set_mode(inp["kind"], inp["value"], announce=True)
+
+        if name == "recall":
+            if not (inp.get("query") or inp.get("date")):
+                return "Give a query, a date (YYYY-MM-DD), or both."
+            return await asyncio.to_thread(history.search, str(inp.get("query") or ""), str(inp.get("date") or ""),
+                                           inp.get("limit") or 8)
 
         if name == "sentinel":
             action = inp["action"]
