@@ -122,6 +122,16 @@ def check_sentinel() -> None:
     print("sentinel ok: 27 status + 10 screen checks a day, Sonnet 5.5 only, silent unless needed")
 
 
+def check_video() -> None:
+    """watch_video's caption parser and timestamps (the download itself needs the internet)."""
+    from jarvis import video
+    vtt = ("WEBVTT\nKind: captions\n\n00:00:01.200 --> 00:00:03.360\nhere we are <c>in</c> front\n\n"
+           "00:00:03.360 --> 00:00:05.000\nhere we are in front\nof the elephants\n\n01:02:03.500 --> 01:02:04.000\nbye")
+    assert video.parse_vtt(vtt) == [(1.2, "here we are in front"), (3.36, "of the elephants"), (3723.5, "bye")], video.parse_vtt(vtt)
+    assert video.stamp(75) == "1:15" and video.stamp(3723) == "1:02:03"
+    print("video ok: captions parsed, repeats dropped")
+
+
 def check_memory() -> None:
     """Conversation memory: the log, the prompt, search, and compaction at the threshold (stubbed model)."""
     import tempfile
@@ -242,6 +252,7 @@ def main() -> None:
     check_imports()
     check_sentinel()
     check_memory()
+    check_video()
     port, remote_port = free_port(), free_port()
     import tempfile
     env = dict(os.environ, JARVIS_DATA_DIR=tempfile.mkdtemp(), JARVIS_PORT=str(port), JARVIS_REMOTE_PORT=str(remote_port), JARVIS_MIC="0",

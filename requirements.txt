@@ -14,6 +14,8 @@ pyautogui            # screen, mouse and keyboard control
 pyperclip
 pyserial             # Arduino / ESP32 / serial boards
 cryptography         # the HTTPS certificate for phones and tablets
+yt-dlp[default]      # watch_video: downloads videos (update it now and then: YouTube changes)
+imageio-ffmpeg       # watch_video: its own ffmpeg, so nothing else needs installing
 
 # macOS
 pyobjc-framework-Cocoa; sys_platform == "darwin"

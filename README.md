@@ -71,6 +71,7 @@ JARVIS.app can be signed with a self-signed certificate, **JARVIS Local Signing*
 | **Full device control** | The Claude computer-use toolset (screenshot, click, type, drag, scroll, keys, zoom) plus a shell (zsh / bash / PowerShell) and, on a Mac, AppleScript. It can drive any app, open things, change settings and work with files. | Mac, Windows, Linux |
 | **Vision** | `look_through_camera` sends a webcam frame to Opus 5.5. Example: "Jarvis, what am I holding?" | everywhere, Pocket too |
 | **Web** | Server-side web search and fetch for news, facts and anything current. | everywhere |
+| **Watch videos** | `watch_video` downloads a YouTube (or other site) link or opens a video file, takes up to 20 timestamped pictures and reads the captions, or listens to the soundtrack when there are none. Example: "Jarvis, watch this and summarise it: <link>". Ask about one part and it looks closer at that stretch. | Mac, Windows, Linux |
 | **Protocols** | Named routines in `data/protocols.json`: House Party, Clean Slate, Workshop, Lockdown, Morning Briefing, Eyes On. Each has its own splash and colour theme. Add your own. | Mac, Windows, Linux |
 | **Diagnostics** | Live CPU, cores, memory, disk, battery and network telemetry, plus a full `system_diagnostics` scan. | Mac, Windows, Linux |
 | **Attach images** | Click 📎, paste or drag pictures onto the window (up to 4), then ask: "what's wrong with this circuit?", "turn this sketch into a to-do list". Location and other photo metadata are stripped first. On phones 📎 opens the photo library or camera. | everywhere |
@@ -272,6 +273,7 @@ jarvis/window.py      the interface window (JARVIS.app, or a Chromium-family app
 jarvis/history.py     conversation memory: the log of every exchange, the running summary, compaction at 60%
 jarvis/sentinel.py    Sentinel: scheduled status and screen checks on Sonnet 5.5, with no tools
 jarvis/imagegen.py    image generation through Cloudflare Workers AI
+jarvis/video.py       watch_video: download (yt-dlp), timestamped frames (ffmpeg), captions or speech recognition
 jarvis/uploads.py     attached images: checks, metadata stripping, the tray that sends them with the next command
 jarvis/deploy.py      copy JARVIS's own source onto a connected drive or Android phone
 jarvis/devices.py     wired devices: discovery, Android (adb), drives, audio switching, serial boards

@@ -22,6 +22,15 @@ if [ ! -x .venv/bin/python ]; then
     "$PY" -m venv .venv && .venv/bin/pip install -r requirements.txt
   fi
 fi
+# An update changed requirements.txt (or this install predates the check): install what's missing.
+if [ requirements.txt -nt .venv/.requirements-installed ]; then
+  echo "Checking JARVIS's requirements..."
+  if command -v uv >/dev/null; then
+    uv pip install -q --python .venv/bin/python -r requirements.txt
+  else
+    .venv/bin/python -m pip install -q -r requirements.txt
+  fi && touch .venv/.requirements-installed || echo "  (couldn't install them; starting anyway)"
+fi
 [ -f .env ] || cp .env.example .env
 
 # JARVIS's voice: Kokoro neural TTS model (~120 MB, first run only). Without it the system voice is used.

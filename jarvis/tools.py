@@ -7,7 +7,7 @@ from pathlib import Path
 
 import aiohttp
 
-from . import computer, deploy, devices, history, imagegen, memory, plat, sysinfo, system
+from . import computer, deploy, devices, history, imagegen, memory, plat, sysinfo, system, video
 
 # --- Tool declarations ---------------------------------------------------------
 
@@ -193,6 +193,20 @@ CUSTOM_TOOLS += [
 
 CUSTOM_TOOLS += [
     _tool(
+        "watch_video",
+        "Watch a video: a YouTube (or other video site) link, or a video file on this computer. You get "
+        "pictures taken at evenly spaced moments, each with its timestamp, plus the transcript (the captions, "
+        "or speech recognition of up to 10 minutes when there are none), the title, chapters and description. "
+        "Use it whenever the user asks you to watch, summarise, explain or answer questions about a video. "
+        "frames = how many pictures (default 10, at most 20). To look closely at one part, give start and "
+        "end in seconds. Long videos take a while to download.",
+        {"source": {"type": "string", "description": "The video's link, or the path of a video file"},
+         "frames": {"type": "integer", "description": "1 to 20, default 10"},
+         "start": {"type": "number", "description": "Seconds from the beginning (optional)"},
+         "end": {"type": "number", "description": "Seconds from the beginning (optional)"}},
+        ["source"],
+    ),
+    _tool(
         "recall",
         "Search the complete, word-for-word log of every past conversation with the user (what they said, "
         "what you answered, what you did). Use it when they refer to something from the past that isn't in "
@@ -300,6 +314,7 @@ REQUIRED_TYPES = {
     "set_mode": {"kind": str, "value": str},
     "sentinel": {"action": str},
     "generate_image": {"prompt": str},
+    "watch_video": {"source": str},
     "wired_devices": {"action": str},
     "android_device": {"action": str},
 }
@@ -549,6 +564,11 @@ class ToolRunner:
             if action == "check":
                 return hub.sentinel.check_now(inp.get("kind") or "text")
             return hub.sentinel.summary()
+
+        if name == "watch_video":
+            async def progress(text):
+                await hub.event("progress", {"text": text})
+            return await video.watch(inp["source"], inp.get("frames") or 10, inp.get("start"), inp.get("end"), progress)
 
         if name == "wired_devices":
             return await devices.wired(inp)

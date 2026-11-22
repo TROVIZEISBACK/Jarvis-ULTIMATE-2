@@ -22,6 +22,14 @@ if (-not (Test-Path $py)) {
         & $py -m pip install -r requirements.txt
     }
 }
+# An update changed requirements.txt (or this install predates the check): install what's missing.
+$stamp = ".venv\.requirements-installed"
+if (-not (Test-Path $stamp) -or (Get-Item requirements.txt).LastWriteTime -gt (Get-Item $stamp).LastWriteTime) {
+    Write-Host "Checking JARVIS's requirements..."
+    if (Get-Command uv -ErrorAction SilentlyContinue) { uv pip install -q --python $py -r requirements.txt }
+    else { & $py -m pip install -q -r requirements.txt }
+    if ($LASTEXITCODE -eq 0) { New-Item -ItemType File -Force $stamp | Out-Null } else { Write-Host "  (couldn't install them; starting anyway)" }
+}
 if (-not (Test-Path ".env")) { Copy-Item ".env.example" ".env" }
 
 # JARVIS's voice: Kokoro neural TTS model (~120 MB, first run only). Without it the Windows voice is used.
