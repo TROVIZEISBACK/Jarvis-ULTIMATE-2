@@ -682,17 +682,16 @@ export class HoloScene {
 
   frame() {
     if (document.hidden) { this.clock.getDelta(); return; }  // don't render while the window is hidden
-    // Frame budget: 30 fps while nothing is happening (the slow drift looks the same and it
-    // halves GPU and window-compositing work), 60 fps when talking, working or tracking hands
-    // (120 Hz displays are held to 60 too).
+    // Frame budget: 30 fps, which halves GPU and window-compositing work and looks the same for
+    // the drift and the voice pulse; 60 fps only while a hand is dragging the hologram (and
+    // 120 Hz displays are held to 60 too).
     const now = performance.now();
-    const calm = this.state === "idle" && !this.handData?.length && this.level < 0.02 &&
-      (this.mode === "idle" || this.mode === "globe") && this.energy < 1.3 * this.boost;
-    if (calm !== this._calm) { this._calm = calm; this.perf.frames = 0; this.perf.time = 0; }
-    if (now - (this._lastFrame || 0) < (calm ? 31 : 15)) return;
+    const smooth = !!this.handData?.length;
+    if (smooth !== this._smooth) { this._smooth = smooth; this.perf.frames = 0; this.perf.time = 0; }
+    if (now - (this._lastFrame || 0) < (smooth ? 15 : 31)) return;
     this._lastFrame = now;
     const rawDt = this.clock.getDelta(), t = this.clock.elapsedTime;
-    if (rawDt < 0.25) this.adapt(rawDt, t, calm ? 30 : 60);
+    if (rawDt < 0.25) this.adapt(rawDt, t, smooth ? 60 : 30);
     const dt = Math.min(rawDt, 0.05);
     this.level += (this.levelTarget - this.level) * Math.min(1, dt * 14);
     this.energy += (this.energyTarget - this.energy) * Math.min(1, dt * 3);
