@@ -1,5 +1,6 @@
 """Tool definitions and local executors for the brain."""
 import asyncio
+import time
 import json
 import os
 import re
@@ -516,7 +517,10 @@ class ToolRunner:
             return json.dumps(await asyncio.to_thread(sysinfo.diagnostics))
 
         if name == "weather":
-            w = await weather(inp.get("location"))
+            if not inp.get("location") and time.monotonic() - getattr(hub, "last_weather_at", -1e9) < 900:
+                w = hub.last_weather  # the HUD refreshed it in the last 15 minutes
+            else:
+                w = await weather(inp.get("location"))
             await hub.event("weather", w)
             return json.dumps(w)
 
